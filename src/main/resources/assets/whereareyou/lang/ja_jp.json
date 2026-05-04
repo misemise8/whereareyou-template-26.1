@@ -41,7 +41,7 @@
   "config.whereareyou.sort.mcid": "MCID順",
   "config.whereareyou.sort.distance": "距離順",
   "config.whereareyou.overlay.enabled": "オーバーレイを有効化",
-  "config.whereareyou.overlay.description": "読み込まれているプレイヤーはネームプレート上に表示します。読み込まれていないプレイヤーは画面端マーカーで表示します。",
+  "config.whereareyou.overlay.description": "画面内の同じディメンションのプレイヤーには、ネームプレートの上に距離で縮む追従ラベルを表示します。画面外の相手は小さな画面端マーカーで表示します。",
   "config.whereareyou.players.bulk": "一括表示設定",
   "config.whereareyou.players.header": "プレイヤー                    HUD       オーバーレイ",
   "config.whereareyou.players.column.player": "プレイヤー",

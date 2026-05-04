@@ -14,7 +14,7 @@ Fabric `26.1` / modid `whereareyou` survival-coop position sharing mod. The serv
 - Cloth Config categories: Sharing, HUD, Overlay, Players, Locations, Admin.
 - Sharing: own location sharing ON/OFF. Turning it OFF hides the player but still allows viewing others.
 - HUD: global ON/OFF, icon/MCID/distance/coordinates/dimension toggles, position preset, X/Y offsets, max players `8`, sort by MCID or distance.
-- Overlay: global ON/OFF, simple edge direction markers, max players uses the HUD limit, hidden for other dimensions.
+- Overlay: global ON/OFF, distance-scaled labels that sit above same-dimension players' vanilla nameplates in screen space, screen-edge fallback for off-screen targets, max players uses the HUD limit, hidden for other dimensions.
 - Players: online players only, UUID-backed HUD/Overlay toggles, and bulk ON/OFF actions.
 - Locations: online players only, MCID, coordinates, dimension, and distance. Distance is hidden across dimensions.
 - Admin: OP-only server settings for feature enabled, default sharing, coordinate/distance/dimension permission, and sync interval.
@@ -37,13 +37,12 @@ Fabric `26.1` / modid `whereareyou` survival-coop position sharing mod. The serv
 - Players tab is table-style: online players only, skin face icon, MCID, HUD ON/OFF, Overlay ON/OFF, bulk display buttons, and the local player defaults to hidden and appears at the top.
 - Locations tab is table-style: online/shared players, skin face icon, MCID, integer block coordinates, dimension, and same-dimension distance. Missing location data shows a no-location/hidden state.
 - Server sync currently sends only sharing-enabled players and respects server-side coordinate, distance, and dimension permissions.
-- Current overlay implementation exists but still needs focused design/testing: loaded same-dimension players get a label above their nameplate, unloaded same-dimension players get a screen-edge marker, and different dimensions are hidden from overlay.
+- Current overlay implementation exists but still needs focused design/testing: visible same-dimension players get distance-scaled labels above the vanilla nameplate in screen space using interpolated render positions, off-screen targets use compact screen-edge markers, close labels are nudged in stable MCID/UUID order to reduce overlap, and different dimensions are hidden from overlay.
 
 ## Next Focus
 - Continue in a new chat with overlay behavior and visual design as the main topic.
-- Verify the loaded-player nameplate overlay appears in the intended position above the vanilla nameplate and is readable without clutter.
-- Verify the screen-edge marker points toward the correct target direction and does not appear for different-dimension players.
-- Decide whether overlay should show icon, MCID, distance, or only a minimal marker/label.
+- Verify the player-following label sits directly above loaded players' vanilla nameplates, scales readably with distance, and does not appear for different-dimension players.
+- Verify the screen-edge fallback points toward off-screen same-dimension targets.
 - Tune overlay scale, opacity, spacing, and overlap behavior after in-game screenshots.
 
 ## Deferred

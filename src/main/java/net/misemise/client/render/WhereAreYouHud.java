@@ -1,9 +1,11 @@
 package net.misemise.client.render;
 
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.world.entity.EntityAttachment;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.Vec3;
 import net.misemise.client.config.ClientSettings;
 import net.misemise.client.config.WhereAreYouClientConfig;
 import net.misemise.client.state.ClientLocationState;
@@ -15,6 +17,24 @@ import java.util.Comparator;
 import java.util.List;
 
 public final class WhereAreYouHud {
+	private static final int OVERLAY_MARGIN = 14;
+	private static final int OVERLAY_PADDING_X = 5;
+	private static final int OVERLAY_ICON_SIZE = 8;
+	private static final int OVERLAY_ICON_GAP = 4;
+	private static final int OVERLAY_MARKER_HEIGHT = 16;
+	private static final int OVERLAY_ONSCREEN_OFFSET = 4;
+	private static final int OVERLAY_NAMEPLATE_HEIGHT = 9;
+	private static final int OVERLAY_NAMEPLATE_GAP = 1;
+	private static final int OVERLAY_STACK_GAP = 2;
+	private static final int OVERLAY_BACKGROUND_COLOR = 0x99000000;
+	private static final int OVERLAY_ACCENT_COLOR = 0xFFFFD15A;
+	private static final int OVERLAY_TEXT_COLOR = 0xFFFFFFFF;
+	private static final float OVERLAY_NEAR_SCALE = 0.90F;
+	private static final float OVERLAY_FAR_SCALE = 0.58F;
+	private static final double OVERLAY_NEAR_DISTANCE = 8.0D;
+	private static final double OVERLAY_FAR_DISTANCE = 96.0D;
+	private static final double OVERLAY_UNLOADED_HEIGHT = 2.35D;
+
 	private WhereAreYouHud() {
 	}
 
@@ -28,7 +48,7 @@ public final class WhereAreYouHud {
 			renderHud(graphics, client, settings);
 		}
 		if (settings.overlayEnabled) {
-			renderOverlay(graphics, client, settings);
+			renderOverlay(graphics, client, settings, deltaTracker.getGameTimeDeltaPartialTick(false));
 		}
 	}
 
@@ -72,41 +92,217 @@ public final class WhereAreYouHud {
 		pose.popMatrix();
 	}
 
-	private static void renderOverlay(GuiGraphicsExtractor graphics, Minecraft client, ClientSettings settings) {
-		String localDimension = client.level.dimension().identifier().toString();
-		List<PlayerLocation> locations = filteredLocations(client, settings, false).stream()
-				.filter(PlayerLocation::hasCoordinates)
-				.filter(PlayerLocation::hasDimension)
-				.filter(location -> localDimension.equals(location.dimension()))
-				.filter(location -> client.level.getEntity(location.uuid()) == null)
-				.limit(settings.maxPlayers)
-				.toList();
-		if (locations.isEmpty()) {
+	private static void renderOverlay(GuiGraphicsExtractor graphics, Minecraft client, ClientSettings settings, float partialTick) {
+		List<OverlayMarker> markers = overlayMarkers(graphics, client, settings, partialTick);
+		if (markers.isEmpty()) {
 			return;
 		}
 
-		int centerX = graphics.guiWidth() / 2;
-		int centerY = graphics.guiHeight() / 2;
-		int margin = 14;
-		for (PlayerLocation location : locations) {
-			double dx = location.x() - client.player.getX();
-			double dz = location.z() - client.player.getZ();
-			if (Math.abs(dx) < 0.01D && Math.abs(dz) < 0.01D) {
+		resolveMarkerOverlap(markers, graphics.guiHeight());
+		for (OverlayMarker marker : markers) {
+			renderOverlayMarker(graphics, client, marker);
+		}
+	}
+
+	private static List<OverlayMarker> overlayMarkers(GuiGraphicsExtractor graphics, Minecraft client, ClientSettings settings, float partialTick) {
+		List<OverlayMarker> markers = new ArrayList<>();
+		Font font = client.font;
+		int screenWidth = graphics.guiWidth();
+		int screenHeight = graphics.guiHeight();
+		int centerX = screenWidth / 2;
+		int centerY = screenHeight / 2;
+		for (PlayerLocation location : overlayLocations(client, settings)) {
+			String label = fitOverlayLabel(font, overlayLabel(location), screenWidth);
+			int markerWidth = overlayMarkerWidth(font, label);
+			float scale = overlayScale(location);
+			Entity entity = client.level.getEntity(location.uuid());
+			Vec3 target = overlayTarget(entity, location, partialTick);
+			Vec3 projected = client.gameRenderer.projectPointToScreen(target);
+			boolean onScreen = isOnScreen(projected);
+			int x;
+			int y;
+			double sx = 0.0D;
+			double sy = -1.0D;
+			if (onScreen) {
+				x = screenX(projected, screenWidth);
+				y = overlayY(screenY(projected, screenHeight), scale, entity != null);
+			} else {
+				double dx = target.x - client.player.getX();
+				double dz = target.z - client.player.getZ();
+				if (Math.abs(dx) < 0.01D && Math.abs(dz) < 0.01D) {
+					continue;
+				}
+				double targetAngle = Math.atan2(dx, dz);
+				double relative = targetAngle + Math.toRadians(client.player.getYRot());
+				sx = Math.sin(relative);
+				sy = -Math.cos(relative);
+				double halfWidth = Math.max(1.0D, screenWidth / 2.0D - OVERLAY_MARGIN);
+				double halfHeight = Math.max(1.0D, screenHeight / 2.0D - OVERLAY_MARGIN);
+				double edgeScale = Math.min(halfWidth / Math.max(0.2D, Math.abs(sx)),
+						halfHeight / Math.max(0.2D, Math.abs(sy)));
+				x = centerX + (int) Math.round(sx * edgeScale);
+				y = centerY + (int) Math.round(sy * edgeScale);
+			}
+			OverlayMarker marker = new OverlayMarker(location, label, x, y, markerWidth, OVERLAY_MARKER_HEIGHT, scale, !onScreen, sx, sy);
+			marker.x = clamp(marker.x, marker.halfWidth() + 2, screenWidth - marker.halfWidth() - 2);
+			marker.y = clamp(marker.y, marker.halfHeight() + 2, screenHeight - marker.halfHeight() - 2);
+			markers.add(marker);
+		}
+		return markers;
+	}
+
+	private static List<PlayerLocation> overlayLocations(Minecraft client, ClientSettings settings) {
+		String localDimension = client.level.dimension().identifier().toString();
+		List<PlayerLocation> locations = new ArrayList<>();
+		for (PlayerLocation location : ClientLocationState.sortedLocations(comparator(settings))) {
+			boolean local = client.player.getUUID().equals(location.uuid());
+			if (local) {
 				continue;
 			}
-			double targetAngle = Math.atan2(dx, dz);
-			double relative = targetAngle + Math.toRadians(client.player.getYRot());
-			double sx = Math.sin(relative);
-			double sy = -Math.cos(relative);
-			double scale = Math.min((graphics.guiWidth() / 2.0D - margin) / Math.max(0.2D, Math.abs(sx)),
-					(graphics.guiHeight() / 2.0D - margin) / Math.max(0.2D, Math.abs(sy)));
-			int x = centerX + (int) Math.round(sx * scale);
-			int y = centerY + (int) Math.round(sy * scale);
-			String label = overlayLabel(location);
-			int textWidth = client.font.width(label);
-			graphics.fill(x - textWidth / 2 - 4, y - 6, x + textWidth / 2 + 4, y + 6, 0x66000000);
-			graphics.centeredText(client.font, label, x, y - 4, 0xFFFFFFFF);
+			ClientSettings.PlayerDisplay display = settings.displayFor(location.uuid(), false);
+			if (!display.overlay || !location.hasCoordinates() || !location.hasDimension()
+					|| !localDimension.equals(location.dimension())) {
+				continue;
+			}
+			locations.add(location);
+			if (locations.size() >= settings.maxPlayers) {
+				break;
+			}
 		}
+		return locations;
+	}
+
+	private static void renderOverlayMarker(GuiGraphicsExtractor graphics, Minecraft client, OverlayMarker marker) {
+		Font font = client.font;
+		int left = -marker.width / 2;
+		int top = -marker.height / 2;
+		int right = left + marker.width;
+		int bottom = top + marker.height;
+		Matrix3x2fStack pose = graphics.pose();
+		pose.pushMatrix();
+		pose.translate(marker.x, marker.y);
+		pose.scale(marker.scale);
+		graphics.fill(left, top, right, bottom, OVERLAY_BACKGROUND_COLOR);
+		if (marker.edge) {
+			renderOverlayAccent(graphics, left, top, right, bottom, marker.sx, marker.sy);
+		} else {
+			graphics.fill(left, top, right, top + 1, OVERLAY_ACCENT_COLOR);
+		}
+		int iconX = left + OVERLAY_PADDING_X;
+		int iconY = top + (marker.height - OVERLAY_ICON_SIZE) / 2;
+		RenderHelpers.renderPlayerIcon(graphics, marker.location.uuid(), iconX, iconY, OVERLAY_ICON_SIZE);
+		int textX = iconX + OVERLAY_ICON_SIZE + OVERLAY_ICON_GAP;
+		int textY = top + (marker.height - font.lineHeight) / 2;
+		graphics.text(font, marker.label, textX, textY, OVERLAY_TEXT_COLOR, true);
+		pose.popMatrix();
+	}
+
+	private static void renderOverlayAccent(GuiGraphicsExtractor graphics, int left, int top, int right, int bottom, double sx, double sy) {
+		if (Math.abs(sx) > Math.abs(sy)) {
+			if (sx >= 0.0D) {
+				graphics.fill(right - 2, top, right, bottom, OVERLAY_ACCENT_COLOR);
+			} else {
+				graphics.fill(left, top, left + 2, bottom, OVERLAY_ACCENT_COLOR);
+			}
+			return;
+		}
+		if (sy >= 0.0D) {
+			graphics.fill(left, bottom - 2, right, bottom, OVERLAY_ACCENT_COLOR);
+		} else {
+			graphics.fill(left, top, right, top + 2, OVERLAY_ACCENT_COLOR);
+		}
+	}
+
+	private static int overlayMarkerWidth(Font font, String label) {
+		return OVERLAY_PADDING_X * 2 + OVERLAY_ICON_SIZE + OVERLAY_ICON_GAP + font.width(label);
+	}
+
+	private static String fitOverlayLabel(Font font, String label, int screenWidth) {
+		int maxTextWidth = Math.max(24, screenWidth - OVERLAY_MARGIN * 2 - OVERLAY_PADDING_X * 2 - OVERLAY_ICON_SIZE - OVERLAY_ICON_GAP);
+		if (font.width(label) <= maxTextWidth) {
+			return label;
+		}
+		String suffix = "...";
+		int suffixWidth = font.width(suffix);
+		int end = label.length();
+		while (end > 0 && font.width(label.substring(0, end)) + suffixWidth > maxTextWidth) {
+			end--;
+		}
+		return end == 0 ? suffix : label.substring(0, end) + suffix;
+	}
+
+	private static void resolveMarkerOverlap(List<OverlayMarker> markers, int screenHeight) {
+		markers.sort(Comparator
+				.comparing((OverlayMarker marker) -> marker.location.name(), String.CASE_INSENSITIVE_ORDER)
+				.thenComparing(marker -> marker.location.uuid().toString()));
+		List<OverlayMarker> placed = new ArrayList<>();
+		for (OverlayMarker marker : markers) {
+			int y = marker.y;
+			for (int attempts = 0; attempts < markers.size() + 4; attempts++) {
+				OverlayMarker overlap = firstOverlap(marker, y, placed);
+				if (overlap == null) {
+					break;
+				}
+				int up = overlap.top() - marker.halfHeight() - OVERLAY_STACK_GAP;
+				y = up >= marker.halfHeight() + 2
+						? up
+						: overlap.bottom() + marker.halfHeight() + OVERLAY_STACK_GAP;
+			}
+			marker.y = clamp(y, marker.halfHeight() + 2, screenHeight - marker.halfHeight() - 2);
+			placed.add(marker);
+		}
+	}
+
+	private static OverlayMarker firstOverlap(OverlayMarker marker, int y, List<OverlayMarker> placed) {
+		for (OverlayMarker other : placed) {
+			if (marker.overlapsAt(y, other)) {
+				return other;
+			}
+		}
+		return null;
+	}
+
+	private static Vec3 overlayTarget(Entity entity, PlayerLocation location, float partialTick) {
+		if (entity != null) {
+			Vec3 attachment = entity.getAttachments().getNullable(EntityAttachment.NAME_TAG, 0, entity.getYRot(partialTick));
+			if (attachment != null) {
+				return entity.getPosition(partialTick).add(attachment);
+			}
+			return entity.getPosition(partialTick).add(0.0D, entity.getBbHeight(), 0.0D);
+		}
+		return new Vec3(location.x(), location.y() + OVERLAY_UNLOADED_HEIGHT, location.z());
+	}
+
+	private static int overlayY(int projectedY, float scale, boolean nameplateAnchored) {
+		int markerHalfHeight = Math.round(OVERLAY_MARKER_HEIGHT * scale / 2.0F);
+		if (nameplateAnchored) {
+			return projectedY - markerHalfHeight - OVERLAY_NAMEPLATE_HEIGHT / 2 - OVERLAY_NAMEPLATE_GAP;
+		}
+		return projectedY - markerHalfHeight - OVERLAY_ONSCREEN_OFFSET;
+	}
+
+	private static float overlayScale(PlayerLocation location) {
+		if (!location.hasDistance()) {
+			return 0.72F;
+		}
+		double t = (location.distance() - OVERLAY_NEAR_DISTANCE) / (OVERLAY_FAR_DISTANCE - OVERLAY_NEAR_DISTANCE);
+		t = Math.max(0.0D, Math.min(1.0D, t));
+		return (float) (OVERLAY_NEAR_SCALE + (OVERLAY_FAR_SCALE - OVERLAY_NEAR_SCALE) * t);
+	}
+
+	private static boolean isOnScreen(Vec3 projected) {
+		return Double.isFinite(projected.x) && Double.isFinite(projected.y) && Double.isFinite(projected.z)
+				&& projected.z <= 1.0D
+				&& projected.x >= -1.0D && projected.x <= 1.0D
+				&& projected.y >= -1.0D && projected.y <= 1.0D;
+	}
+
+	private static int screenX(Vec3 projected, int screenWidth) {
+		return (int) Math.round((projected.x + 1.0D) * 0.5D * screenWidth);
+	}
+
+	private static int screenY(Vec3 projected, int screenHeight) {
+		return (int) Math.round((1.0D - projected.y) * 0.5D * screenHeight);
 	}
 
 	private static List<PlayerLocation> filteredLocations(Minecraft client, ClientSettings settings, boolean hud) {
@@ -157,6 +353,80 @@ public final class WhereAreYouHud {
 			return location.name() + " " + String.format("%.0fm", location.distance());
 		}
 		return location.name();
+	}
+
+	private static int clamp(int value, int min, int max) {
+		if (max < min) {
+			return (min + max) / 2;
+		}
+		return Math.max(min, Math.min(max, value));
+	}
+
+	private static final class OverlayMarker {
+		private final PlayerLocation location;
+		private final String label;
+		private int x;
+		private int y;
+		private final int width;
+		private final int height;
+		private final float scale;
+		private final boolean edge;
+		private final double sx;
+		private final double sy;
+
+		private OverlayMarker(PlayerLocation location, String label, int x, int y, int width, int height, float scale, boolean edge, double sx, double sy) {
+			this.location = location;
+			this.label = label;
+			this.x = x;
+			this.y = y;
+			this.width = width;
+			this.height = height;
+			this.scale = scale;
+			this.edge = edge;
+			this.sx = sx;
+			this.sy = sy;
+		}
+
+		private int displayWidth() {
+			return Math.max(1, Math.round(width * scale));
+		}
+
+		private int displayHeight() {
+			return Math.max(1, Math.round(height * scale));
+		}
+
+		private int halfWidth() {
+			return displayWidth() / 2 + 1;
+		}
+
+		private int halfHeight() {
+			return displayHeight() / 2 + 1;
+		}
+
+		private int left() {
+			return x - halfWidth();
+		}
+
+		private int right() {
+			return x + halfWidth();
+		}
+
+		private int top() {
+			return y - halfHeight();
+		}
+
+		private int bottom() {
+			return y + halfHeight();
+		}
+
+		private boolean overlapsAt(int candidateY, OverlayMarker other) {
+			int top = candidateY - halfHeight();
+			int bottom = candidateY + halfHeight();
+			return left() < other.right()
+					&& right() > other.left()
+					&& top < other.bottom()
+					&& bottom > other.top();
+		}
 	}
 
 	private static int[] resolveHudPosition(ClientSettings settings, int screenWidth, int screenHeight, int width, int height) {

@@ -41,7 +41,7 @@
   "config.whereareyou.sort.mcid": "MCID",
   "config.whereareyou.sort.distance": "Distance",
   "config.whereareyou.overlay.enabled": "Overlay enabled",
-  "config.whereareyou.overlay.description": "Loaded players are labeled above their nameplate. Unloaded players fall back to a screen-edge marker.",
+  "config.whereareyou.overlay.description": "Visible same-dimension players get distance-scaled labels above their nameplates. Off-screen targets use compact edge markers.",
   "config.whereareyou.players.bulk": "Bulk display controls",
   "config.whereareyou.players.header": "Player                         HUD       Overlay",
   "config.whereareyou.players.column.player": "Player",

@@ -7,13 +7,11 @@ import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.misemise.WhereAreYou;
 import net.misemise.client.config.ClientSettings;
 import net.misemise.client.config.WhereAreYouClientConfig;
 import net.misemise.client.gui.WhereAreYouConfigScreen;
 import net.misemise.client.render.WhereAreYouHud;
-import net.misemise.client.render.WhereAreYouWorldOverlay;
 import net.misemise.client.state.ClientLocationState;
 import net.misemise.network.payload.AdminRulesPayload;
 import net.misemise.network.payload.LocationUpdatePayload;
@@ -35,7 +33,6 @@ public class WhereAreYouClient implements ClientModInitializer {
 		registerKeys();
 		registerNetworking();
 		HudElementRegistry.addLast(WhereAreYou.id("hud"), WhereAreYouHud::render);
-		LevelRenderEvents.COLLECT_SUBMITS.register(WhereAreYouWorldOverlay::render);
 		ClientTickEvents.END_CLIENT_TICK.register(this::tick);
 	}
 
