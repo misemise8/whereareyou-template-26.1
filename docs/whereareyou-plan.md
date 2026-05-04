@@ -30,6 +30,22 @@ Fabric `26.1` / modid `whereareyou` survival-coop position sharing mod. The serv
 - Death does not stop visibility.
 - Display name is MCID.
 
+## Current Implementation Notes
+- Dependencies, entrypoints, networking payloads, server sync, per-server client config, OP-only server config, keybindings, HUD, initial overlay, and Mod Menu/Cloth Config integration are implemented.
+- HUD offset sliders update live and clamp to `-200..200`.
+- Client settings are localized in English and Japanese through `en_us.json` and `ja_jp.json`.
+- Players tab is table-style: online players only, skin face icon, MCID, HUD ON/OFF, Overlay ON/OFF, bulk display buttons, and the local player defaults to hidden and appears at the top.
+- Locations tab is table-style: online/shared players, skin face icon, MCID, integer block coordinates, dimension, and same-dimension distance. Missing location data shows a no-location/hidden state.
+- Server sync currently sends only sharing-enabled players and respects server-side coordinate, distance, and dimension permissions.
+- Current overlay implementation exists but still needs focused design/testing: loaded same-dimension players get a label above their nameplate, unloaded same-dimension players get a screen-edge marker, and different dimensions are hidden from overlay.
+
+## Next Focus
+- Continue in a new chat with overlay behavior and visual design as the main topic.
+- Verify the loaded-player nameplate overlay appears in the intended position above the vanilla nameplate and is readable without clutter.
+- Verify the screen-edge marker points toward the correct target direction and does not appear for different-dimension players.
+- Decide whether overlay should show icon, MCID, distance, or only a minimal marker/label.
+- Tune overlay scale, opacity, spacing, and overlap behavior after in-game screenshots.
+
 ## Deferred
 - Overlay overlap handling.
 - Stale position age display.

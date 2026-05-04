@@ -1,6 +1,5 @@
 package net.misemise.client.gui.entry;
 
-import com.mojang.authlib.GameProfile;
 import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import net.misemise.client.config.ClientSettings;
 import net.misemise.client.config.WhereAreYouClientConfig;
@@ -10,58 +9,63 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
 import java.util.Optional;
 
 public class PlayerDisplayEntry extends AbstractConfigListEntry<Void> {
-	private final GameProfile profile;
+	private final DisplayPlayer player;
 	private final ClientSettings.PlayerDisplay display;
-	private final boolean localPlayer;
 	private final Button hudButton;
 	private final Button overlayButton;
 
-	public PlayerDisplayEntry(GameProfile profile, ClientSettings.PlayerDisplay display, boolean localPlayer) {
-		super(Component.literal(profile.name()), false);
-		this.profile = profile;
+	public PlayerDisplayEntry(DisplayPlayer player, ClientSettings.PlayerDisplay display) {
+		super(Component.literal(player.name()), false);
+		this.player = player;
 		this.display = display;
-		this.localPlayer = localPlayer;
 		this.hudButton = Button.builder(Component.empty(), button -> {
 			display.hud = !display.hud;
 			updateButtonLabels();
 			WhereAreYouClientConfig.save();
-		}).size(58, 20).build();
+		}).size(PlayerTableLayout.BUTTON_WIDTH, PlayerTableLayout.BUTTON_HEIGHT).build();
 		this.overlayButton = Button.builder(Component.empty(), button -> {
 			display.overlay = !display.overlay;
 			updateButtonLabels();
 			WhereAreYouClientConfig.save();
-		}).size(76, 20).build();
+		}).size(PlayerTableLayout.BUTTON_WIDTH, PlayerTableLayout.BUTTON_HEIGHT).build();
 		updateButtonLabels();
 	}
 
 	@Override
-	public void extractRenderState(GuiGraphicsExtractor graphics, int index, int x, int y, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float delta) {
-		if (hovered) {
-			graphics.fill(x, y, x + entryWidth, y + entryHeight, 0x22000000);
-		}
-		int iconX = x + 6;
-		int iconY = y + 5;
-		RenderHelpers.renderPlayerIcon(graphics, profile.id(), iconX, iconY, 16);
-		String label = localPlayer ? profile.name() + " (you)" : profile.name();
-		graphics.text(Minecraft.getInstance().font, label, x + 28, y + 9, 0xFFFFFFFF, true);
+	public void extractRenderState(GuiGraphicsExtractor graphics, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float delta) {
+		super.extractRenderState(graphics, index, y, x, entryWidth, entryHeight, mouseX, mouseY, hovered, delta);
+		int bottom = y + entryHeight;
+		int hudLeft = PlayerTableLayout.hudColumnLeft(x, entryWidth);
+		int overlayLeft = PlayerTableLayout.overlayColumnLeft(x, entryWidth);
+		int right = PlayerTableLayout.columnRight(x, entryWidth);
+		graphics.fill(x, y, right, bottom, hovered ? 0x30000000 : 0x18000000);
+		PlayerTableHeaderEntry.drawGrid(graphics, x, y, bottom, hudLeft, overlayLeft, right);
 
-		int overlayX = x + entryWidth - 84;
-		int hudX = overlayX - 66;
-		hudButton.setRectangle(hudX, y + 4, 58, 20);
-		overlayButton.setRectangle(overlayX, y + 4, 76, 20);
+		int iconX = PlayerTableLayout.playerColumnLeft(x);
+		int iconY = y + 5;
+		RenderHelpers.renderPlayerIcon(graphics, player.uuid(), iconX, iconY, PlayerTableLayout.ICON_SIZE);
+		String label = player.localPlayer() ? I18n.get("config.whereareyou.players.you", player.name()) : player.name();
+		graphics.text(Minecraft.getInstance().font, label, PlayerTableLayout.playerTextX(x), y + 9, 0xFFFFFFFF, true);
+
+		int hudX = PlayerTableLayout.hudButtonX(x, entryWidth);
+		int overlayX = PlayerTableLayout.overlayButtonX(x, entryWidth);
+		updateButtonLabels();
+		hudButton.setRectangle(PlayerTableLayout.BUTTON_WIDTH, PlayerTableLayout.BUTTON_HEIGHT, hudX, y + PlayerTableLayout.BUTTON_TOP_PADDING);
+		overlayButton.setRectangle(PlayerTableLayout.BUTTON_WIDTH, PlayerTableLayout.BUTTON_HEIGHT, overlayX, y + PlayerTableLayout.BUTTON_TOP_PADDING);
 		hudButton.extractRenderState(graphics, mouseX, mouseY, delta);
 		overlayButton.extractRenderState(graphics, mouseX, mouseY, delta);
 	}
 
 	@Override
 	public int getItemHeight() {
-		return 28;
+		return PlayerTableLayout.ROW_HEIGHT;
 	}
 
 	@Override
@@ -90,7 +94,7 @@ public class PlayerDisplayEntry extends AbstractConfigListEntry<Void> {
 	}
 
 	private void updateButtonLabels() {
-		hudButton.setMessage(Component.literal(display.hud ? "HUD ON" : "HUD OFF"));
-		overlayButton.setMessage(Component.literal(display.overlay ? "Overlay ON" : "Overlay OFF"));
+		hudButton.setMessage(Component.translatable(display.hud ? "config.whereareyou.state.on" : "config.whereareyou.state.off"));
+		overlayButton.setMessage(Component.translatable(display.overlay ? "config.whereareyou.state.on" : "config.whereareyou.state.off"));
 	}
 }

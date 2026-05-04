@@ -7,32 +7,39 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
+import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
 import java.util.Optional;
 
 public class LocationEntry extends AbstractConfigListEntry<Void> {
+	private final DisplayPlayer player;
 	private final PlayerLocation location;
 
-	public LocationEntry(PlayerLocation location) {
-		super(Component.literal(location.name()), false);
+	public LocationEntry(DisplayPlayer player, PlayerLocation location) {
+		super(Component.literal(player.name()), false);
+		this.player = player;
 		this.location = location;
 	}
 
 	@Override
-	public void extractRenderState(GuiGraphicsExtractor graphics, int index, int x, int y, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float delta) {
-		if (hovered) {
-			graphics.fill(x, y, x + entryWidth, y + entryHeight, 0x22000000);
-		}
-		RenderHelpers.renderPlayerIcon(graphics, location.uuid(), x + 6, y + 5, 16);
-		graphics.text(Minecraft.getInstance().font, location.name(), x + 28, y + 9, 0xFFFFFFFF, true);
-		graphics.text(Minecraft.getInstance().font, formatLocation(), x + Math.max(160, entryWidth / 3), y + 9, 0xFFE0E0E0, true);
+	public void extractRenderState(GuiGraphicsExtractor graphics, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float delta) {
+		super.extractRenderState(graphics, index, y, x, entryWidth, entryHeight, mouseX, mouseY, hovered, delta);
+		int bottom = y + entryHeight;
+		int locationLeft = LocationTableLayout.locationColumnLeft(x, entryWidth);
+		int right = LocationTableLayout.columnRight(x, entryWidth);
+		graphics.fill(x, y, right, bottom, hovered ? 0x30000000 : 0x18000000);
+		LocationTableHeaderEntry.drawGrid(graphics, x, y, bottom, locationLeft, right);
+
+		RenderHelpers.renderPlayerIcon(graphics, player.uuid(), LocationTableLayout.playerColumnLeft(x), y + 5, LocationTableLayout.ICON_SIZE);
+		graphics.text(Minecraft.getInstance().font, player.name(), LocationTableLayout.playerTextX(x), y + 9, 0xFFFFFFFF, true);
+		graphics.text(Minecraft.getInstance().font, formatLocation(), LocationTableLayout.locationTextX(x, entryWidth), y + 9, 0xFFE0E0E0, true);
 	}
 
 	@Override
 	public int getItemHeight() {
-		return 28;
+		return LocationTableLayout.ROW_HEIGHT;
 	}
 
 	@Override
@@ -61,16 +68,23 @@ public class LocationEntry extends AbstractConfigListEntry<Void> {
 	}
 
 	private String formatLocation() {
+		if (location == null) {
+			return I18n.get("config.whereareyou.locations.no_location");
+		}
 		List<String> parts = new java.util.ArrayList<>();
 		if (location.hasCoordinates()) {
-			parts.add(String.format("x %.1f  y %.1f  z %.1f", location.x(), location.y(), location.z()));
+			parts.add(I18n.get("config.whereareyou.locations.coordinates", blockCoord(location.x()), blockCoord(location.y()), blockCoord(location.z())));
 		}
 		if (location.hasDimension()) {
 			parts.add(RenderHelpers.prettyDimension(location.dimension()));
 		}
 		if (location.hasDistance()) {
-			parts.add(String.format("%.0fm", location.distance()));
+			parts.add(I18n.get("config.whereareyou.locations.distance", Math.round(location.distance())));
 		}
-		return parts.isEmpty() ? "Hidden by server" : String.join("  |  ", parts);
+		return parts.isEmpty() ? I18n.get("config.whereareyou.locations.hidden") : String.join("  |  ", parts);
+	}
+
+	private static int blockCoord(double value) {
+		return (int) Math.floor(value);
 	}
 }

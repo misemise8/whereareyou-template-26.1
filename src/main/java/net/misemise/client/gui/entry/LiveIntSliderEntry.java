@@ -12,13 +12,17 @@ public class LiveIntSliderEntry extends IntegerSliderEntry {
 	private final Consumer<Integer> liveConsumer;
 
 	public LiveIntSliderEntry(Component fieldName, int value, int min, int max, Component resetButtonKey, Supplier<Integer> defaultValue, Consumer<Integer> saveConsumer, Consumer<Integer> liveConsumer) {
-		super(fieldName, value, min, max, resetButtonKey, defaultValue, saveConsumer, Optional::empty, false);
+		super(fieldName, min, max, clamp(value, min, max), resetButtonKey, defaultValue, saveConsumer, Optional::empty, false);
 		this.liveConsumer = liveConsumer;
 	}
 
 	@Override
-	public void extractRenderState(GuiGraphicsExtractor graphics, int index, int x, int y, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float delta) {
+	public void extractRenderState(GuiGraphicsExtractor graphics, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float delta) {
 		liveConsumer.accept(getValue());
-		super.extractRenderState(graphics, index, x, y, entryWidth, entryHeight, mouseX, mouseY, hovered, delta);
+		super.extractRenderState(graphics, index, y, x, entryWidth, entryHeight, mouseX, mouseY, hovered, delta);
+	}
+
+	private static int clamp(int value, int min, int max) {
+		return Math.max(min, Math.min(max, value));
 	}
 }

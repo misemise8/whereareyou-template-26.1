@@ -2,9 +2,11 @@ package net.misemise.client.render;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.Identifier;
+import net.minecraft.client.resources.DefaultPlayerSkin;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.world.entity.player.PlayerSkin;
 
 import java.util.UUID;
 
@@ -14,33 +16,24 @@ public final class RenderHelpers {
 
 	public static void renderPlayerIcon(GuiGraphicsExtractor graphics, UUID uuid, int x, int y, int size) {
 		Minecraft client = Minecraft.getInstance();
+		PlayerSkin skin = DefaultPlayerSkin.get(uuid);
 		if (client.getConnection() != null) {
 			PlayerInfo info = client.getConnection().getPlayerInfo(uuid);
 			if (info != null) {
-				Identifier texture = info.getSkin().body().texturePath();
-				graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 8.0F, 8.0F, size, size, 64, 64);
-				graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 40.0F, 8.0F, size, size, 64, 64);
-				return;
+				skin = info.getSkin();
 			}
 		}
-		graphics.fill(x, y, x + size, y + size, colorFor(uuid.hashCode()));
+		PlayerFaceExtractor.extractRenderState(graphics, skin, x, y, size);
 	}
 
 	public static String prettyDimension(String dimension) {
 		int index = dimension.indexOf(':');
 		String path = index >= 0 ? dimension.substring(index + 1) : dimension;
 		return switch (path) {
-			case "overworld" -> "Overworld";
-			case "the_nether" -> "Nether";
-			case "the_end" -> "The End";
+			case "overworld" -> I18n.get("config.whereareyou.dimension.overworld");
+			case "the_nether" -> I18n.get("config.whereareyou.dimension.nether");
+			case "the_end" -> I18n.get("config.whereareyou.dimension.end");
 			default -> path;
 		};
-	}
-
-	private static int colorFor(int seed) {
-		int r = 80 + Math.floorMod(seed, 120);
-		int g = 80 + Math.floorMod(seed / 31, 120);
-		int b = 80 + Math.floorMod(seed / 997, 120);
-		return 0xFF000000 | r << 16 | g << 8 | b;
 	}
 }

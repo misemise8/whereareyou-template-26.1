@@ -28,6 +28,18 @@ public class ClientSettings {
 	}
 
 	public void clamp() {
+		if (hudXOffset < -200) {
+			hudXOffset = -200;
+		}
+		if (hudXOffset > 200) {
+			hudXOffset = 200;
+		}
+		if (hudYOffset < -200) {
+			hudYOffset = -200;
+		}
+		if (hudYOffset > 200) {
+			hudYOffset = 200;
+		}
 		if (hudScale < 50) {
 			hudScale = 50;
 		}
