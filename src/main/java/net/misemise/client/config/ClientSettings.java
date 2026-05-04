@@ -20,6 +20,9 @@ public class ClientSettings {
 	public int maxPlayers = 8;
 	public SortMode sortMode = SortMode.MCID;
 	public DisplayKeyMode displayKeyMode = DisplayKeyMode.TOGGLE;
+	public OverlayContentMode overlayContentMode = OverlayContentMode.ICON_NAME_DISTANCE;
+	public int overlayScale = 100;
+	public int overlayBackgroundOpacity = 60;
 	public Map<String, PlayerDisplay> playerDisplays = new HashMap<>();
 
 	public PlayerDisplay displayFor(UUID uuid, boolean localPlayer) {
@@ -52,6 +55,21 @@ public class ClientSettings {
 		if (maxPlayers > 32) {
 			maxPlayers = 32;
 		}
+		if (overlayContentMode == null) {
+			overlayContentMode = OverlayContentMode.ICON_NAME_DISTANCE;
+		}
+		if (overlayScale < 50) {
+			overlayScale = 50;
+		}
+		if (overlayScale > 150) {
+			overlayScale = 150;
+		}
+		if (overlayBackgroundOpacity < 20) {
+			overlayBackgroundOpacity = 20;
+		}
+		if (overlayBackgroundOpacity > 100) {
+			overlayBackgroundOpacity = 100;
+		}
 	}
 
 	public enum HudPosition {
@@ -69,6 +87,12 @@ public class ClientSettings {
 	public enum DisplayKeyMode {
 		TOGGLE,
 		HOLD
+	}
+
+	public enum OverlayContentMode {
+		ICON_NAME_DISTANCE,
+		NAME_DISTANCE,
+		DISTANCE
 	}
 
 	public static class PlayerDisplay {

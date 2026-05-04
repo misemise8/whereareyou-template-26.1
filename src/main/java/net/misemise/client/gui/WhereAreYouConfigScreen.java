@@ -156,6 +156,25 @@ public final class WhereAreYouConfigScreen {
 				.setDefaultValue(true)
 				.setSaveConsumer(value -> settings.overlayEnabled = value)
 				.build());
+		category.addEntry(entries.startEnumSelector(Component.translatable("config.whereareyou.overlay.content"), ClientSettings.OverlayContentMode.class, settings.overlayContentMode)
+				.setDefaultValue(ClientSettings.OverlayContentMode.ICON_NAME_DISTANCE)
+				.setEnumNameProvider(value -> switch ((ClientSettings.OverlayContentMode) value) {
+					case ICON_NAME_DISTANCE -> Component.translatable("config.whereareyou.overlay.content.icon_name_distance");
+					case NAME_DISTANCE -> Component.translatable("config.whereareyou.overlay.content.name_distance");
+					case DISTANCE -> Component.translatable("config.whereareyou.overlay.content.distance");
+				})
+				.setSaveConsumer(value -> settings.overlayContentMode = value)
+				.build());
+		category.addEntry(entries.startIntSlider(Component.translatable("config.whereareyou.overlay.scale"), settings.overlayScale, 50, 150)
+				.setDefaultValue(100)
+				.setTextGetter(value -> Component.translatable("config.whereareyou.overlay.scale.value", value))
+				.setSaveConsumer(value -> settings.overlayScale = value)
+				.build());
+		category.addEntry(entries.startIntSlider(Component.translatable("config.whereareyou.overlay.background_opacity"), settings.overlayBackgroundOpacity, 20, 100)
+				.setDefaultValue(60)
+				.setTextGetter(value -> Component.translatable("config.whereareyou.overlay.background_opacity.value", value))
+				.setSaveConsumer(value -> settings.overlayBackgroundOpacity = value)
+				.build());
 		category.addEntry(entries.startTextDescription(Component.translatable("config.whereareyou.overlay.description")).build());
 	}
 

@@ -26,7 +26,6 @@ public final class WhereAreYouHud {
 	private static final int OVERLAY_NAMEPLATE_HEIGHT = 9;
 	private static final int OVERLAY_NAMEPLATE_GAP = 1;
 	private static final int OVERLAY_STACK_GAP = 2;
-	private static final int OVERLAY_BACKGROUND_COLOR = 0x99000000;
 	private static final int OVERLAY_ACCENT_COLOR = 0xFFFFD15A;
 	private static final int OVERLAY_TEXT_COLOR = 0xFFFFFFFF;
 	private static final float OVERLAY_NEAR_SCALE = 0.90F;
@@ -100,7 +99,7 @@ public final class WhereAreYouHud {
 
 		resolveMarkerOverlap(markers, graphics.guiHeight());
 		for (OverlayMarker marker : markers) {
-			renderOverlayMarker(graphics, client, marker);
+			renderOverlayMarker(graphics, client, settings, marker);
 		}
 	}
 
@@ -111,10 +110,11 @@ public final class WhereAreYouHud {
 		int screenHeight = graphics.guiHeight();
 		int centerX = screenWidth / 2;
 		int centerY = screenHeight / 2;
+		boolean showIcon = overlayShowsIcon(settings.overlayContentMode);
 		for (PlayerLocation location : overlayLocations(client, settings)) {
-			String label = fitOverlayLabel(font, overlayLabel(location), screenWidth);
-			int markerWidth = overlayMarkerWidth(font, label);
-			float scale = overlayScale(location);
+			String label = fitOverlayLabel(font, overlayLabel(location, settings.overlayContentMode), screenWidth, showIcon);
+			int markerWidth = overlayMarkerWidth(font, label, showIcon);
+			float scale = overlayScale(location, settings);
 			Entity entity = client.level.getEntity(location.uuid());
 			Vec3 target = overlayTarget(entity, location, partialTick);
 			Vec3 projected = client.gameRenderer.projectPointToScreen(target);
@@ -143,7 +143,7 @@ public final class WhereAreYouHud {
 				x = centerX + (int) Math.round(sx * edgeScale);
 				y = centerY + (int) Math.round(sy * edgeScale);
 			}
-			OverlayMarker marker = new OverlayMarker(location, label, x, y, markerWidth, OVERLAY_MARKER_HEIGHT, scale, !onScreen, sx, sy);
+			OverlayMarker marker = new OverlayMarker(location, label, x, y, markerWidth, OVERLAY_MARKER_HEIGHT, scale, !onScreen, showIcon, sx, sy);
 			marker.x = clamp(marker.x, marker.halfWidth() + 2, screenWidth - marker.halfWidth() - 2);
 			marker.y = clamp(marker.y, marker.halfHeight() + 2, screenHeight - marker.halfHeight() - 2);
 			markers.add(marker);
@@ -172,7 +172,7 @@ public final class WhereAreYouHud {
 		return locations;
 	}
 
-	private static void renderOverlayMarker(GuiGraphicsExtractor graphics, Minecraft client, OverlayMarker marker) {
+	private static void renderOverlayMarker(GuiGraphicsExtractor graphics, Minecraft client, ClientSettings settings, OverlayMarker marker) {
 		Font font = client.font;
 		int left = -marker.width / 2;
 		int top = -marker.height / 2;
@@ -182,16 +182,19 @@ public final class WhereAreYouHud {
 		pose.pushMatrix();
 		pose.translate(marker.x, marker.y);
 		pose.scale(marker.scale);
-		graphics.fill(left, top, right, bottom, OVERLAY_BACKGROUND_COLOR);
+		graphics.fill(left, top, right, bottom, overlayBackgroundColor(settings));
 		if (marker.edge) {
 			renderOverlayAccent(graphics, left, top, right, bottom, marker.sx, marker.sy);
 		} else {
 			graphics.fill(left, top, right, top + 1, OVERLAY_ACCENT_COLOR);
 		}
-		int iconX = left + OVERLAY_PADDING_X;
-		int iconY = top + (marker.height - OVERLAY_ICON_SIZE) / 2;
-		RenderHelpers.renderPlayerIcon(graphics, marker.location.uuid(), iconX, iconY, OVERLAY_ICON_SIZE);
-		int textX = iconX + OVERLAY_ICON_SIZE + OVERLAY_ICON_GAP;
+		int textX = left + OVERLAY_PADDING_X;
+		if (marker.showIcon) {
+			int iconX = left + OVERLAY_PADDING_X;
+			int iconY = top + (marker.height - OVERLAY_ICON_SIZE) / 2;
+			RenderHelpers.renderPlayerIcon(graphics, marker.location.uuid(), iconX, iconY, OVERLAY_ICON_SIZE);
+			textX = iconX + OVERLAY_ICON_SIZE + OVERLAY_ICON_GAP;
+		}
 		int textY = top + (marker.height - font.lineHeight) / 2;
 		graphics.text(font, marker.label, textX, textY, OVERLAY_TEXT_COLOR, true);
 		pose.popMatrix();
@@ -213,12 +216,14 @@ public final class WhereAreYouHud {
 		}
 	}
 
-	private static int overlayMarkerWidth(Font font, String label) {
-		return OVERLAY_PADDING_X * 2 + OVERLAY_ICON_SIZE + OVERLAY_ICON_GAP + font.width(label);
+	private static int overlayMarkerWidth(Font font, String label, boolean showIcon) {
+		int iconWidth = showIcon ? OVERLAY_ICON_SIZE + OVERLAY_ICON_GAP : 0;
+		return OVERLAY_PADDING_X * 2 + iconWidth + font.width(label);
 	}
 
-	private static String fitOverlayLabel(Font font, String label, int screenWidth) {
-		int maxTextWidth = Math.max(24, screenWidth - OVERLAY_MARGIN * 2 - OVERLAY_PADDING_X * 2 - OVERLAY_ICON_SIZE - OVERLAY_ICON_GAP);
+	private static String fitOverlayLabel(Font font, String label, int screenWidth, boolean showIcon) {
+		int iconWidth = showIcon ? OVERLAY_ICON_SIZE + OVERLAY_ICON_GAP : 0;
+		int maxTextWidth = Math.max(24, screenWidth - OVERLAY_MARGIN * 2 - OVERLAY_PADDING_X * 2 - iconWidth);
 		if (font.width(label) <= maxTextWidth) {
 			return label;
 		}
@@ -281,13 +286,13 @@ public final class WhereAreYouHud {
 		return projectedY - markerHalfHeight - OVERLAY_ONSCREEN_OFFSET;
 	}
 
-	private static float overlayScale(PlayerLocation location) {
+	private static float overlayScale(PlayerLocation location, ClientSettings settings) {
 		if (!location.hasDistance()) {
-			return 0.72F;
+			return 0.72F * settings.overlayScale / 100.0F;
 		}
 		double t = (location.distance() - OVERLAY_NEAR_DISTANCE) / (OVERLAY_FAR_DISTANCE - OVERLAY_NEAR_DISTANCE);
 		t = Math.max(0.0D, Math.min(1.0D, t));
-		return (float) (OVERLAY_NEAR_SCALE + (OVERLAY_FAR_SCALE - OVERLAY_NEAR_SCALE) * t);
+		return (float) (OVERLAY_NEAR_SCALE + (OVERLAY_FAR_SCALE - OVERLAY_NEAR_SCALE) * t) * settings.overlayScale / 100.0F;
 	}
 
 	private static boolean isOnScreen(Vec3 projected) {
@@ -348,11 +353,23 @@ public final class WhereAreYouHud {
 		return String.join("  ", parts);
 	}
 
-	private static String overlayLabel(PlayerLocation location) {
+	private static String overlayLabel(PlayerLocation location, ClientSettings.OverlayContentMode mode) {
+		if (mode == ClientSettings.OverlayContentMode.DISTANCE) {
+			return location.hasDistance() ? String.format("%.0fm", location.distance()) : location.name();
+		}
 		if (location.hasDistance()) {
 			return location.name() + " " + String.format("%.0fm", location.distance());
 		}
 		return location.name();
+	}
+
+	private static boolean overlayShowsIcon(ClientSettings.OverlayContentMode mode) {
+		return mode == ClientSettings.OverlayContentMode.ICON_NAME_DISTANCE;
+	}
+
+	private static int overlayBackgroundColor(ClientSettings settings) {
+		int alpha = clamp(Math.round(settings.overlayBackgroundOpacity * 255.0F / 100.0F), 0, 255);
+		return alpha << 24;
 	}
 
 	private static int clamp(int value, int min, int max) {
@@ -371,10 +388,11 @@ public final class WhereAreYouHud {
 		private final int height;
 		private final float scale;
 		private final boolean edge;
+		private final boolean showIcon;
 		private final double sx;
 		private final double sy;
 
-		private OverlayMarker(PlayerLocation location, String label, int x, int y, int width, int height, float scale, boolean edge, double sx, double sy) {
+		private OverlayMarker(PlayerLocation location, String label, int x, int y, int width, int height, float scale, boolean edge, boolean showIcon, double sx, double sy) {
 			this.location = location;
 			this.label = label;
 			this.x = x;
@@ -383,6 +401,7 @@ public final class WhereAreYouHud {
 			this.height = height;
 			this.scale = scale;
 			this.edge = edge;
+			this.showIcon = showIcon;
 			this.sx = sx;
 			this.sy = sy;
 		}
