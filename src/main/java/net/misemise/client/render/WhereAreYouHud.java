@@ -4,10 +4,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElement;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.multiplayer.PlayerInfo;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.Identifier;
-import net.minecraft.world.phys.Vec3;
 import net.misemise.client.config.ClientSettings;
 import net.misemise.client.config.WhereAreYouClientConfig;
 import net.misemise.client.state.ClientLocationState;
@@ -68,7 +64,7 @@ public final class WhereAreYouHud {
 			int rowY = y + 2 + index * lineHeight;
 			int textX = x;
 			if (settings.showIcon) {
-				renderPlayerIcon(graphics, client, location, x, rowY + 1, iconSize);
+				RenderHelpers.renderPlayerIcon(graphics, location.uuid(), x, rowY + 1, iconSize);
 				textX += iconSize + iconGap;
 			}
 			graphics.text(font, lines.get(index), textX, rowY, 0xFFFFFFFF, true);
@@ -82,6 +78,7 @@ public final class WhereAreYouHud {
 				.filter(PlayerLocation::hasCoordinates)
 				.filter(PlayerLocation::hasDimension)
 				.filter(location -> localDimension.equals(location.dimension()))
+				.filter(location -> client.level.getEntity(location.uuid()) == null)
 				.limit(settings.maxPlayers)
 				.toList();
 		if (locations.isEmpty()) {
@@ -98,7 +95,7 @@ public final class WhereAreYouHud {
 				continue;
 			}
 			double targetAngle = Math.atan2(dx, dz);
-			double relative = targetAngle - Math.toRadians(client.player.getYRot());
+			double relative = targetAngle + Math.toRadians(client.player.getYRot());
 			double sx = Math.sin(relative);
 			double sy = -Math.cos(relative);
 			double scale = Math.min((graphics.guiWidth() / 2.0D - margin) / Math.max(0.2D, Math.abs(sx)),
@@ -147,7 +144,7 @@ public final class WhereAreYouHud {
 			parts.add(String.format("%.0f %.0f %.0f", location.x(), location.y(), location.z()));
 		}
 		if (settings.showDimension && location.hasDimension()) {
-			parts.add(prettyDimension(location.dimension()));
+			parts.add(RenderHelpers.prettyDimension(location.dimension()));
 		}
 		if (parts.isEmpty()) {
 			return location.name();
@@ -174,34 +171,4 @@ public final class WhereAreYouHud {
 		return new int[]{Math.max(0, x), Math.max(0, y)};
 	}
 
-	private static String prettyDimension(String dimension) {
-		int index = dimension.indexOf(':');
-		String path = index >= 0 ? dimension.substring(index + 1) : dimension;
-		return switch (path) {
-			case "overworld" -> "Overworld";
-			case "the_nether" -> "Nether";
-			case "the_end" -> "The End";
-			default -> path;
-		};
-	}
-
-	private static void renderPlayerIcon(GuiGraphicsExtractor graphics, Minecraft client, PlayerLocation location, int x, int y, int size) {
-		if (client.getConnection() != null) {
-			PlayerInfo info = client.getConnection().getPlayerInfo(location.uuid());
-			if (info != null) {
-				Identifier texture = info.getSkin().body().texturePath();
-				graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 8.0F, 8.0F, size, size, 64, 64);
-				graphics.blit(RenderPipelines.GUI_TEXTURED, texture, x, y, 40.0F, 8.0F, size, size, 64, 64);
-				return;
-			}
-		}
-		graphics.fill(x, y, x + size, y + size, colorFor(location.uuid().hashCode()));
-	}
-
-	private static int colorFor(int seed) {
-		int r = 80 + Math.floorMod(seed, 120);
-		int g = 80 + Math.floorMod(seed / 31, 120);
-		int b = 80 + Math.floorMod(seed / 997, 120);
-		return 0xFF000000 | r << 16 | g << 8 | b;
-	}
 }
