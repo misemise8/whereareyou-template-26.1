@@ -5,7 +5,7 @@
 	"name": "WhereAreYou",
 	"description": "Survival-friendly multiplayer location sharing with HUD, overlay, and Cloth Config controls.",
 	"authors": [
-		"Me!"
+		"misemise"
 	],
 	"contact": {},
 	"license": "CC0-1.0",
@@ -27,7 +27,7 @@
 	},
 	"depends": {
 		"fabricloader": ">=0.19.2",
-		"minecraft": "~26.1",
+		"minecraft": "~26.1.2",
 		"java": ">=25",
 		"fabric-api": "*",
 		"cloth-config": ">=26.1.154"
