@@ -5,6 +5,7 @@ import net.misemise.client.config.ClientSettings;
 import net.misemise.client.config.WhereAreYouClientConfig;
 import net.misemise.client.render.RenderHelpers;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -16,6 +17,11 @@ import java.util.List;
 import java.util.Optional;
 
 public class PlayerDisplayEntry extends AbstractConfigListEntry<Void> {
+	private static final int ROW_FILL_COLOR = 0x12000000;
+	private static final int ROW_HOVER_FILL_COLOR = 0x26000000;
+	private static final int TEXT_COLOR = 0xFFFFFFFF;
+	private static final int LOCAL_TEXT_COLOR = 0xFFFFD36F;
+
 	private final DisplayPlayer player;
 	private final ClientSettings.PlayerDisplay display;
 	private final Button hudButton;
@@ -45,14 +51,17 @@ public class PlayerDisplayEntry extends AbstractConfigListEntry<Void> {
 		int hudLeft = PlayerTableLayout.hudColumnLeft(x, entryWidth);
 		int overlayLeft = PlayerTableLayout.overlayColumnLeft(x, entryWidth);
 		int right = PlayerTableLayout.columnRight(x, entryWidth);
-		graphics.fill(x, y, right, bottom, hovered ? 0x30000000 : 0x18000000);
+		graphics.fill(x, y, right, bottom, hovered ? ROW_HOVER_FILL_COLOR : ROW_FILL_COLOR);
 		PlayerTableHeaderEntry.drawGrid(graphics, x, y, bottom, hudLeft, overlayLeft, right);
 
+		Font font = Minecraft.getInstance().font;
 		int iconX = PlayerTableLayout.playerColumnLeft(x);
 		int iconY = y + 5;
 		RenderHelpers.renderPlayerIcon(graphics, player.uuid(), iconX, iconY, PlayerTableLayout.ICON_SIZE);
 		String label = player.localPlayer() ? I18n.get("config.whereareyou.players.you", player.name()) : player.name();
-		graphics.text(Minecraft.getInstance().font, label, PlayerTableLayout.playerTextX(x), y + 9, 0xFFFFFFFF, true);
+		int maxNameWidth = hudLeft - PlayerTableLayout.playerTextX(x) - PlayerTableLayout.CELL_PADDING;
+		label = RenderHelpers.ellipsize(font, label, maxNameWidth);
+		graphics.text(font, label, PlayerTableLayout.playerTextX(x), y + 9, player.localPlayer() ? LOCAL_TEXT_COLOR : TEXT_COLOR, true);
 
 		int hudX = PlayerTableLayout.hudButtonX(x, entryWidth);
 		int overlayX = PlayerTableLayout.overlayButtonX(x, entryWidth);

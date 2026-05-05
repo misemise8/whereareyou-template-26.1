@@ -19,8 +19,17 @@ import java.util.List;
 
 public final class WhereAreYouHud {
 	private static final int HUD_ICON_SIZE = 8;
-	private static final int HUD_ICON_GAP = 4;
-	private static final int HUD_COLUMN_GAP = 14;
+	private static final int HUD_ICON_GAP = 3;
+	private static final int HUD_COLUMN_GAP = 10;
+	private static final int HUD_BACKGROUND_COLOR = 0x60000000;
+	private static final int HUD_ACCENT_COLOR = 0x99E6C36A;
+	private static final int HUD_TEXT_COLOR = 0xFFFFFFFF;
+	private static final int HUD_DISTANCE_COLOR = 0xFFFFD36F;
+	private static final int HUD_COORDINATE_COLOR = 0xFFD6D6D6;
+	private static final int HUD_COORDINATE_NETHER_COLOR = 0xFFFF6A3D;
+	private static final int HUD_COORDINATE_END_COLOR = 0xFFC37CFF;
+	private static final int HUD_COORDINATE_OTHER_DIMENSION_COLOR = 0xFFA8D8FF;
+	private static final int HUD_DIMENSION_COLOR = 0xFFB8C7D9;
 	private static final int OVERLAY_MARGIN = 14;
 	private static final int OVERLAY_PADDING_X = 5;
 	private static final int OVERLAY_ICON_SIZE = 8;
@@ -32,13 +41,13 @@ public final class WhereAreYouHud {
 	private static final int OVERLAY_NAMEPLATE_HEIGHT = 9;
 	private static final int OVERLAY_NAMEPLATE_GAP = 1;
 	private static final int OVERLAY_STACK_GAP = 2;
-	private static final int OVERLAY_ACCENT_COLOR = 0xFFFFD15A;
-	private static final int OVERLAY_TEXT_COLOR = 0xFFFFFFFF;
-	private static final int OVERLAY_DISTANCE_COLOR = 0xFFFFD15A;
-	private static final float OVERLAY_CLOSE_SCALE = 0.74F;
-	private static final float OVERLAY_MID_SCALE = 0.88F;
-	private static final float OVERLAY_FAR_SCALE = 0.70F;
-	private static final float OVERLAY_EDGE_SCALE = 0.82F;
+	private static final int OVERLAY_ACCENT_COLOR = 0xCCE6C36A;
+	private static final int OVERLAY_TEXT_COLOR = 0xFFF4F4F4;
+	private static final int OVERLAY_DISTANCE_COLOR = 0xFFFFD36F;
+	private static final float OVERLAY_CLOSE_SCALE = 0.76F;
+	private static final float OVERLAY_MID_SCALE = 0.92F;
+	private static final float OVERLAY_FAR_SCALE = 0.68F;
+	private static final float OVERLAY_EDGE_SCALE = 0.78F;
 	private static final double OVERLAY_CLOSE_DISTANCE = 12.0D;
 	private static final double OVERLAY_MID_DISTANCE = 40.0D;
 	private static final double OVERLAY_FAR_DISTANCE = 96.0D;
@@ -76,19 +85,20 @@ public final class WhereAreYouHud {
 		int iconSize = settings.showIcon ? HUD_ICON_SIZE : 0;
 		int iconGap = settings.showIcon ? HUD_ICON_GAP : 0;
 		int width = iconSize + iconGap + columns.width;
-		int lineHeight = Math.max(font.lineHeight, iconSize) + 2;
-		int height = rows.size() * lineHeight + 2;
-		int[] xy = resolveHudPosition(settings, graphics.guiWidth(), graphics.guiHeight(), width + 6, height + 4);
+		int lineHeight = Math.max(font.lineHeight, iconSize) + 1;
+		int height = rows.size() * lineHeight + 1;
+		int[] xy = resolveHudPosition(settings, graphics.guiWidth(), graphics.guiHeight(), width + 4, height + 2);
 		float scale = settings.hudScale / 100.0F;
 		Matrix3x2fStack pose = graphics.pose();
 		pose.pushMatrix();
 		pose.scale(scale);
 		int x = Math.round(xy[0] / scale);
 		int y = Math.round(xy[1] / scale);
-		graphics.fill(x - 2, y - 2, x + width + 6, y + height, 0x66000000);
+		graphics.fill(x - 1, y - 1, x + width + 4, y + height, HUD_BACKGROUND_COLOR);
+		graphics.fill(x - 1, y - 1, x + width + 4, y, HUD_ACCENT_COLOR);
 		for (int index = 0; index < rows.size(); index++) {
 			HudRow row = rows.get(index);
-			int rowY = y + 2 + index * lineHeight;
+			int rowY = y + 1 + index * lineHeight;
 			int textX = x;
 			if (settings.showIcon) {
 				RenderHelpers.renderPlayerIcon(graphics, row.location.uuid(), x, rowY + 1, iconSize);
@@ -103,7 +113,7 @@ public final class WhereAreYouHud {
 		int cellX = x;
 		boolean previous = false;
 		if (columns.showName) {
-			graphics.text(font, row.name, cellX, y, 0xFFFFFFFF, true);
+			graphics.text(font, row.name, cellX, y, HUD_TEXT_COLOR, true);
 			cellX += columns.nameWidth;
 			previous = true;
 		}
@@ -111,7 +121,7 @@ public final class WhereAreYouHud {
 			if (previous) {
 				cellX += HUD_COLUMN_GAP;
 			}
-			renderRightAlignedHudText(graphics, font, row.distance, cellX, y, columns.distanceWidth);
+			renderRightAlignedHudText(graphics, font, row.distance, cellX, y, columns.distanceWidth, HUD_DISTANCE_COLOR);
 			cellX += columns.distanceWidth;
 			previous = true;
 		}
@@ -119,7 +129,7 @@ public final class WhereAreYouHud {
 			if (previous) {
 				cellX += HUD_COLUMN_GAP;
 			}
-			renderRightAlignedHudText(graphics, font, row.coordinates, cellX, y, columns.coordinatesWidth);
+			renderRightAlignedHudText(graphics, font, row.coordinates, cellX, y, columns.coordinatesWidth, row.coordinateColor);
 			cellX += columns.coordinatesWidth;
 			previous = true;
 		}
@@ -127,15 +137,15 @@ public final class WhereAreYouHud {
 			if (previous) {
 				cellX += HUD_COLUMN_GAP;
 			}
-			graphics.text(font, row.dimension, cellX, y, 0xFFFFFFFF, true);
+			graphics.text(font, row.dimension, cellX, y, HUD_DIMENSION_COLOR, true);
 		}
 	}
 
-	private static void renderRightAlignedHudText(GuiGraphicsExtractor graphics, Font font, String text, int x, int y, int width) {
+	private static void renderRightAlignedHudText(GuiGraphicsExtractor graphics, Font font, String text, int x, int y, int width, int color) {
 		if (text.isEmpty()) {
 			return;
 		}
-		graphics.text(font, text, x + width - font.width(text), y, 0xFFFFFFFF, true);
+		graphics.text(font, text, x + width - font.width(text), y, color, true);
 	}
 
 	private static HudColumns hudColumns(Font font, List<HudRow> rows, ClientSettings settings) {
@@ -206,7 +216,26 @@ public final class WhereAreYouHud {
 		return new HudRow(location, location.name(),
 				location.hasDistance() ? String.format("%.0fm", location.distance()) : "",
 				location.hasCoordinates() ? String.format("%.0f %.0f %.0f", location.x(), location.y(), location.z()) : "",
-				location.hasDimension() ? RenderHelpers.prettyDimension(location.dimension()) : "");
+				location.hasDimension() ? RenderHelpers.prettyDimension(location.dimension()) : "",
+				coordinateColor(location));
+	}
+
+	private static int coordinateColor(PlayerLocation location) {
+		if (!location.hasDimension()) {
+			return HUD_COORDINATE_COLOR;
+		}
+		String path = dimensionPath(location.dimension());
+		return switch (path) {
+			case "overworld" -> HUD_COORDINATE_COLOR;
+			case "the_nether" -> HUD_COORDINATE_NETHER_COLOR;
+			case "the_end" -> HUD_COORDINATE_END_COLOR;
+			default -> HUD_COORDINATE_OTHER_DIMENSION_COLOR;
+		};
+	}
+
+	private static String dimensionPath(String dimension) {
+		int index = dimension.indexOf(':');
+		return index >= 0 ? dimension.substring(index + 1) : dimension;
 	}
 
 	private static void renderOverlay(GuiGraphicsExtractor graphics, Minecraft client, ClientSettings settings, float partialTick) {
@@ -334,16 +363,16 @@ public final class WhereAreYouHud {
 	private static void renderOverlayAccent(GuiGraphicsExtractor graphics, int left, int top, int right, int bottom, double sx, double sy) {
 		if (Math.abs(sx) > Math.abs(sy)) {
 			if (sx >= 0.0D) {
-				graphics.fill(right - 2, top, right, bottom, OVERLAY_ACCENT_COLOR);
+				graphics.fill(right - 1, top, right, bottom, OVERLAY_ACCENT_COLOR);
 			} else {
-				graphics.fill(left, top, left + 2, bottom, OVERLAY_ACCENT_COLOR);
+				graphics.fill(left, top, left + 1, bottom, OVERLAY_ACCENT_COLOR);
 			}
 			return;
 		}
 		if (sy >= 0.0D) {
-			graphics.fill(left, bottom - 2, right, bottom, OVERLAY_ACCENT_COLOR);
+			graphics.fill(left, bottom - 1, right, bottom, OVERLAY_ACCENT_COLOR);
 		} else {
-			graphics.fill(left, top, right, top + 2, OVERLAY_ACCENT_COLOR);
+			graphics.fill(left, top, right, top + 1, OVERLAY_ACCENT_COLOR);
 		}
 	}
 
@@ -510,12 +539,35 @@ public final class WhereAreYouHud {
 
 	private static Comparator<PlayerLocation> comparator(ClientSettings settings) {
 		Comparator<PlayerLocation> byName = Comparator.comparing(PlayerLocation::name, String.CASE_INSENSITIVE_ORDER);
+		Comparator<PlayerLocation> selected = byName;
 		if (settings.sortMode == ClientSettings.SortMode.DISTANCE) {
-			return Comparator
+			selected = Comparator
 					.comparingDouble((PlayerLocation location) -> location.hasDistance() ? location.distance() : Double.MAX_VALUE)
 					.thenComparing(byName);
 		}
-		return byName;
+		if (!settings.groupByDimension) {
+			return selected;
+		}
+		return Comparator
+				.comparingInt(WhereAreYouHud::dimensionSortOrder)
+				.thenComparing(WhereAreYouHud::dimensionSortKey, String.CASE_INSENSITIVE_ORDER)
+				.thenComparing(selected);
+	}
+
+	private static int dimensionSortOrder(PlayerLocation location) {
+		if (!location.hasDimension()) {
+			return 4;
+		}
+		return switch (dimensionPath(location.dimension())) {
+			case "overworld" -> 0;
+			case "the_nether" -> 1;
+			case "the_end" -> 2;
+			default -> 3;
+		};
+	}
+
+	private static String dimensionSortKey(PlayerLocation location) {
+		return location.hasDimension() ? dimensionPath(location.dimension()) : "";
 	}
 
 	private static OverlayBand overlayBand(PlayerLocation location) {
@@ -568,7 +620,7 @@ public final class WhereAreYouHud {
 		DIMENSION
 	}
 
-	private record HudRow(PlayerLocation location, String name, String distance, String coordinates, String dimension) {
+	private record HudRow(PlayerLocation location, String name, String distance, String coordinates, String dimension, int coordinateColor) {
 	}
 
 	private record HudColumns(boolean showName, boolean showDistance, boolean showCoordinates, boolean showDimension,

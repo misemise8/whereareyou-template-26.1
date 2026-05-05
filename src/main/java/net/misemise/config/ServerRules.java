@@ -2,7 +2,7 @@ package net.misemise.config;
 
 public class ServerRules {
 	public static final int DEFAULT_SYNC_INTERVAL_TICKS = 20;
-	public static final int MIN_SYNC_INTERVAL_TICKS = 10;
+	public static final int MIN_SYNC_INTERVAL_TICKS = 1;
 	public static final int MAX_SYNC_INTERVAL_TICKS = 200;
 
 	public boolean enabled = true;

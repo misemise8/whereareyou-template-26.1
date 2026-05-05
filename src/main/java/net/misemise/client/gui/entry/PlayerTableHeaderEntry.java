@@ -1,6 +1,7 @@
 package net.misemise.client.gui.entry;
 
 import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
+import net.misemise.client.render.RenderHelpers;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -12,6 +13,10 @@ import java.util.List;
 import java.util.Optional;
 
 public class PlayerTableHeaderEntry extends AbstractConfigListEntry<Void> {
+	private static final int HEADER_FILL_COLOR = 0x26000000;
+	private static final int GRID_COLOR = 0x30FFFFFF;
+	private static final int HEADER_TEXT_COLOR = 0xFFE8E8E8;
+
 	private final Component playerLabel;
 	private final Component hudLabel;
 	private final Component overlayLabel;
@@ -31,11 +36,12 @@ public class PlayerTableHeaderEntry extends AbstractConfigListEntry<Void> {
 		int overlayLeft = PlayerTableLayout.overlayColumnLeft(x, entryWidth);
 		int right = PlayerTableLayout.columnRight(x, entryWidth);
 
-		graphics.fill(x, y, right, bottom, 0x30000000);
+		graphics.fill(x, y, right, bottom, HEADER_FILL_COLOR);
 		drawGrid(graphics, x, y, bottom, hudLeft, overlayLeft, right);
 
 		Font font = Minecraft.getInstance().font;
-		graphics.text(font, playerLabel, PlayerTableLayout.playerColumnLeft(x), y + 8, 0xFFE8E8E8, true);
+		int maxPlayerWidth = hudLeft - PlayerTableLayout.playerColumnLeft(x) - PlayerTableLayout.CELL_PADDING;
+		graphics.text(font, RenderHelpers.ellipsize(font, playerLabel.getString(), maxPlayerWidth), PlayerTableLayout.playerColumnLeft(x), y + 8, HEADER_TEXT_COLOR, true);
 		drawCentered(graphics, font, hudLabel, hudLeft, overlayLeft, y + 8);
 		drawCentered(graphics, font, overlayLabel, overlayLeft, right, y + 8);
 	}
@@ -71,18 +77,18 @@ public class PlayerTableHeaderEntry extends AbstractConfigListEntry<Void> {
 	}
 
 	static void drawGrid(GuiGraphicsExtractor graphics, int left, int top, int bottom, int hudLeft, int overlayLeft, int right) {
-		int color = 0x55FFFFFF;
-		graphics.fill(left, top, right, top + 1, color);
-		graphics.fill(left, bottom - 1, right, bottom, color);
-		graphics.fill(left, top, left + 1, bottom, color);
-		graphics.fill(hudLeft, top, hudLeft + 1, bottom, color);
-		graphics.fill(overlayLeft, top, overlayLeft + 1, bottom, color);
-		graphics.fill(right - 1, top, right, bottom, color);
+		graphics.fill(left, top, right, top + 1, GRID_COLOR);
+		graphics.fill(left, bottom - 1, right, bottom, GRID_COLOR);
+		graphics.fill(left, top, left + 1, bottom, GRID_COLOR);
+		graphics.fill(hudLeft, top, hudLeft + 1, bottom, GRID_COLOR);
+		graphics.fill(overlayLeft, top, overlayLeft + 1, bottom, GRID_COLOR);
+		graphics.fill(right - 1, top, right, bottom, GRID_COLOR);
 	}
 
 	private static void drawCentered(GuiGraphicsExtractor graphics, Font font, Component text, int left, int right, int y) {
-		int width = font.width(text);
+		String label = RenderHelpers.ellipsize(font, text.getString(), right - left - PlayerTableLayout.CELL_PADDING * 2);
+		int width = font.width(label);
 		int x = left + Math.max(0, (right - left - width) / 2);
-		graphics.text(font, text, x, y, 0xFFE8E8E8, true);
+		graphics.text(font, label, x, y, HEADER_TEXT_COLOR, true);
 	}
 }

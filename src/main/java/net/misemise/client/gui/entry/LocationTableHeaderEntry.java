@@ -1,6 +1,7 @@
 package net.misemise.client.gui.entry;
 
 import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
+import net.misemise.client.render.RenderHelpers;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -12,6 +13,10 @@ import java.util.List;
 import java.util.Optional;
 
 public class LocationTableHeaderEntry extends AbstractConfigListEntry<Void> {
+	private static final int HEADER_FILL_COLOR = 0x26000000;
+	private static final int GRID_COLOR = 0x30FFFFFF;
+	private static final int HEADER_TEXT_COLOR = 0xFFE8E8E8;
+
 	private final Component playerLabel;
 	private final Component locationLabel;
 
@@ -28,12 +33,14 @@ public class LocationTableHeaderEntry extends AbstractConfigListEntry<Void> {
 		int locationLeft = LocationTableLayout.locationColumnLeft(x, entryWidth);
 		int right = LocationTableLayout.columnRight(x, entryWidth);
 
-		graphics.fill(x, y, right, bottom, 0x30000000);
+		graphics.fill(x, y, right, bottom, HEADER_FILL_COLOR);
 		drawGrid(graphics, x, y, bottom, locationLeft, right);
 
 		Font font = Minecraft.getInstance().font;
-		graphics.text(font, playerLabel, LocationTableLayout.playerColumnLeft(x), y + 8, 0xFFE8E8E8, true);
-		graphics.text(font, locationLabel, LocationTableLayout.locationTextX(x, entryWidth), y + 8, 0xFFE8E8E8, true);
+		int maxPlayerWidth = locationLeft - LocationTableLayout.playerColumnLeft(x) - LocationTableLayout.CELL_PADDING;
+		int maxLocationWidth = right - LocationTableLayout.locationTextX(x, entryWidth) - LocationTableLayout.CELL_PADDING;
+		graphics.text(font, RenderHelpers.ellipsize(font, playerLabel.getString(), maxPlayerWidth), LocationTableLayout.playerColumnLeft(x), y + 8, HEADER_TEXT_COLOR, true);
+		graphics.text(font, RenderHelpers.ellipsize(font, locationLabel.getString(), maxLocationWidth), LocationTableLayout.locationTextX(x, entryWidth), y + 8, HEADER_TEXT_COLOR, true);
 	}
 
 	@Override
@@ -67,11 +74,10 @@ public class LocationTableHeaderEntry extends AbstractConfigListEntry<Void> {
 	}
 
 	static void drawGrid(GuiGraphicsExtractor graphics, int left, int top, int bottom, int locationLeft, int right) {
-		int color = 0x55FFFFFF;
-		graphics.fill(left, top, right, top + 1, color);
-		graphics.fill(left, bottom - 1, right, bottom, color);
-		graphics.fill(left, top, left + 1, bottom, color);
-		graphics.fill(locationLeft, top, locationLeft + 1, bottom, color);
-		graphics.fill(right - 1, top, right, bottom, color);
+		graphics.fill(left, top, right, top + 1, GRID_COLOR);
+		graphics.fill(left, bottom - 1, right, bottom, GRID_COLOR);
+		graphics.fill(left, top, left + 1, bottom, GRID_COLOR);
+		graphics.fill(locationLeft, top, locationLeft + 1, bottom, GRID_COLOR);
+		graphics.fill(right - 1, top, right, bottom, GRID_COLOR);
 	}
 }

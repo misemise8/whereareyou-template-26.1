@@ -13,7 +13,11 @@ import java.util.List;
 import java.util.Optional;
 
 public class BulkDisplayEntry extends AbstractConfigListEntry<Void> {
+	private static final int BUTTON_COLUMNS = 3;
+	private static final int BUTTON_GAP = 4;
 	private static final int BUTTON_HEIGHT = 20;
+	private static final int BUTTON_TOP_PADDING = 4;
+	private static final int BUTTON_SIDE_PADDING = 4;
 
 	private final ClientSettings settings;
 	private final List<DisplayPlayer> players;
@@ -26,9 +30,9 @@ public class BulkDisplayEntry extends AbstractConfigListEntry<Void> {
 		this.buttons = List.of(
 				button("config.whereareyou.players.hud_on", () -> setAll(true, null)),
 				button("config.whereareyou.players.hud_off", () -> setAll(false, null)),
+				button("config.whereareyou.players.all_on", () -> setAll(true, true)),
 				button("config.whereareyou.players.overlay_on", () -> setAll(null, true)),
 				button("config.whereareyou.players.overlay_off", () -> setAll(null, false)),
-				button("config.whereareyou.players.all_on", () -> setAll(true, true)),
 				button("config.whereareyou.players.all_off", () -> setAll(false, false))
 		);
 	}
@@ -36,18 +40,25 @@ public class BulkDisplayEntry extends AbstractConfigListEntry<Void> {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int index, int y, int x, int entryWidth, int entryHeight, int mouseX, int mouseY, boolean hovered, float delta) {
 		super.extractRenderState(graphics, index, y, x, entryWidth, entryHeight, mouseX, mouseY, hovered, delta);
-		int buttonWidth = Math.min(78, Math.max(56, (entryWidth - 20) / buttons.size()));
-		int startX = x + 4;
+		int availableWidth = Math.max(1, entryWidth - BUTTON_SIDE_PADDING * 2);
+		int rowWidth = availableWidth - BUTTON_GAP * (BUTTON_COLUMNS - 1);
+		int buttonWidth = Math.min(96, Math.max(64, rowWidth / BUTTON_COLUMNS));
+		int usedWidth = buttonWidth * BUTTON_COLUMNS + BUTTON_GAP * (BUTTON_COLUMNS - 1);
+		int startX = x + BUTTON_SIDE_PADDING + Math.max(0, (availableWidth - usedWidth) / 2);
 		for (int i = 0; i < buttons.size(); i++) {
 			Button button = buttons.get(i);
-			button.setRectangle(buttonWidth - 4, BUTTON_HEIGHT, startX + i * buttonWidth, y + 4);
+			int column = i % BUTTON_COLUMNS;
+			int row = i / BUTTON_COLUMNS;
+			int buttonX = startX + column * (buttonWidth + BUTTON_GAP);
+			int buttonY = y + BUTTON_TOP_PADDING + row * (BUTTON_HEIGHT + BUTTON_GAP);
+			button.setRectangle(buttonWidth, BUTTON_HEIGHT, buttonX, buttonY);
 			button.extractRenderState(graphics, mouseX, mouseY, delta);
 		}
 	}
 
 	@Override
 	public int getItemHeight() {
-		return 28;
+		return 52;
 	}
 
 	@Override

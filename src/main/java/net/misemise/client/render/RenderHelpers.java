@@ -1,6 +1,7 @@
 package net.misemise.client.render;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.multiplayer.PlayerInfo;
@@ -35,5 +36,24 @@ public final class RenderHelpers {
 			case "the_end" -> I18n.get("config.whereareyou.dimension.end");
 			default -> path;
 		};
+	}
+
+	public static String ellipsize(Font font, String text, int maxWidth) {
+		if (text == null || text.isEmpty() || maxWidth <= 0) {
+			return "";
+		}
+		if (font.width(text) <= maxWidth) {
+			return text;
+		}
+		String suffix = "...";
+		int suffixWidth = font.width(suffix);
+		if (suffixWidth > maxWidth) {
+			return "";
+		}
+		int end = text.length();
+		while (end > 0 && font.width(text.substring(0, end)) + suffixWidth > maxWidth) {
+			end--;
+		}
+		return end == 0 ? suffix : text.substring(0, end) + suffix;
 	}
 }

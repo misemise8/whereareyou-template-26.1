@@ -12,7 +12,8 @@ public class ClientSettings {
 	public boolean showName = true;
 	public boolean showDistance = true;
 	public boolean showCoordinates = false;
-	public boolean showDimension = true;
+	public boolean showDimension = false;
+	public boolean groupByDimension = true;
 	public HudPosition hudPosition = HudPosition.TOP_LEFT;
 	public int hudXOffset = 4;
 	public int hudYOffset = 4;
@@ -22,7 +23,7 @@ public class ClientSettings {
 	public DisplayKeyMode displayKeyMode = DisplayKeyMode.TOGGLE;
 	public OverlayContentMode overlayContentMode = OverlayContentMode.ICON_NAME_DISTANCE;
 	public int overlayScale = 100;
-	public int overlayBackgroundOpacity = 60;
+	public int overlayBackgroundOpacity = 50;
 	public Map<String, PlayerDisplay> playerDisplays = new HashMap<>();
 
 	public PlayerDisplay displayFor(UUID uuid, boolean localPlayer) {
@@ -64,8 +65,8 @@ public class ClientSettings {
 		if (overlayScale > 150) {
 			overlayScale = 150;
 		}
-		if (overlayBackgroundOpacity < 20) {
-			overlayBackgroundOpacity = 20;
+		if (overlayBackgroundOpacity < 10) {
+			overlayBackgroundOpacity = 10;
 		}
 		if (overlayBackgroundOpacity > 100) {
 			overlayBackgroundOpacity = 100;

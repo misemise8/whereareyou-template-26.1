@@ -110,8 +110,12 @@ public final class WhereAreYouConfigScreen {
 				.setSaveConsumer(value -> settings.showCoordinates = value)
 				.build());
 		category.addEntry(entries.startBooleanToggle(Component.translatable("config.whereareyou.hud.show_dimension"), settings.showDimension)
-				.setDefaultValue(true)
+				.setDefaultValue(false)
 				.setSaveConsumer(value -> settings.showDimension = value)
+				.build());
+		category.addEntry(entries.startBooleanToggle(Component.translatable("config.whereareyou.hud.group_by_dimension"), settings.groupByDimension)
+				.setDefaultValue(true)
+				.setSaveConsumer(value -> settings.groupByDimension = value)
 				.build());
 		category.addEntry(entries.startEnumSelector(Component.translatable("config.whereareyou.hud.position"), ClientSettings.HudPosition.class, settings.hudPosition)
 				.setDefaultValue(ClientSettings.HudPosition.TOP_LEFT)
@@ -170,8 +174,8 @@ public final class WhereAreYouConfigScreen {
 				.setTextGetter(value -> Component.translatable("config.whereareyou.overlay.scale.value", value))
 				.setSaveConsumer(value -> settings.overlayScale = value)
 				.build());
-		category.addEntry(entries.startIntSlider(Component.translatable("config.whereareyou.overlay.background_opacity"), settings.overlayBackgroundOpacity, 20, 100)
-				.setDefaultValue(60)
+		category.addEntry(entries.startIntSlider(Component.translatable("config.whereareyou.overlay.background_opacity"), settings.overlayBackgroundOpacity, 10, 100)
+				.setDefaultValue(50)
 				.setTextGetter(value -> Component.translatable("config.whereareyou.overlay.background_opacity.value", value))
 				.setSaveConsumer(value -> settings.overlayBackgroundOpacity = value)
 				.build());

@@ -4,6 +4,7 @@ import me.shedaniel.clothconfig2.api.AbstractConfigListEntry;
 import net.misemise.client.render.RenderHelpers;
 import net.misemise.network.PlayerLocation;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
@@ -14,6 +15,14 @@ import java.util.List;
 import java.util.Optional;
 
 public class LocationEntry extends AbstractConfigListEntry<Void> {
+	private static final int ROW_FILL_COLOR = 0x12000000;
+	private static final int ROW_HOVER_FILL_COLOR = 0x26000000;
+	private static final int PLAYER_TEXT_COLOR = 0xFFFFFFFF;
+	private static final int DETAIL_TEXT_COLOR = 0xFFD6D6D6;
+	private static final int DISTANCE_TEXT_COLOR = 0xFFFFD36F;
+	private static final int STATUS_TEXT_COLOR = 0xFFB8B8B8;
+	private static final int DETAIL_GAP = 10;
+
 	private final DisplayPlayer player;
 	private final PlayerLocation location;
 
@@ -29,12 +38,15 @@ public class LocationEntry extends AbstractConfigListEntry<Void> {
 		int bottom = y + entryHeight;
 		int locationLeft = LocationTableLayout.locationColumnLeft(x, entryWidth);
 		int right = LocationTableLayout.columnRight(x, entryWidth);
-		graphics.fill(x, y, right, bottom, hovered ? 0x30000000 : 0x18000000);
+		graphics.fill(x, y, right, bottom, hovered ? ROW_HOVER_FILL_COLOR : ROW_FILL_COLOR);
 		LocationTableHeaderEntry.drawGrid(graphics, x, y, bottom, locationLeft, right);
 
+		Font font = Minecraft.getInstance().font;
 		RenderHelpers.renderPlayerIcon(graphics, player.uuid(), LocationTableLayout.playerColumnLeft(x), y + 5, LocationTableLayout.ICON_SIZE);
-		graphics.text(Minecraft.getInstance().font, player.name(), LocationTableLayout.playerTextX(x), y + 9, 0xFFFFFFFF, true);
-		graphics.text(Minecraft.getInstance().font, formatLocation(), LocationTableLayout.locationTextX(x, entryWidth), y + 9, 0xFFE0E0E0, true);
+		int maxNameWidth = locationLeft - LocationTableLayout.playerTextX(x) - LocationTableLayout.CELL_PADDING;
+		String playerLabel = RenderHelpers.ellipsize(font, player.name(), maxNameWidth);
+		graphics.text(font, playerLabel, LocationTableLayout.playerTextX(x), y + 9, PLAYER_TEXT_COLOR, true);
+		renderLocationDetails(graphics, font, LocationTableLayout.locationTextX(x, entryWidth), right - LocationTableLayout.CELL_PADDING, y + 9);
 	}
 
 	@Override
@@ -67,24 +79,63 @@ public class LocationEntry extends AbstractConfigListEntry<Void> {
 		return List.of();
 	}
 
-	private String formatLocation() {
-		if (location == null) {
-			return I18n.get("config.whereareyou.locations.no_location");
+	private void renderLocationDetails(GuiGraphicsExtractor graphics, Font font, int left, int right, int y) {
+		LocationText text = locationText();
+		if (!text.status.isEmpty()) {
+			graphics.text(font, RenderHelpers.ellipsize(font, text.status, right - left), left, y, STATUS_TEXT_COLOR, true);
+			return;
 		}
-		List<String> parts = new java.util.ArrayList<>();
+
+		int textRight = right;
+		if (!text.distance.isEmpty()) {
+			int distanceX = right - font.width(text.distance);
+			graphics.text(font, text.distance, distanceX, y, DISTANCE_TEXT_COLOR, true);
+			textRight = distanceX - DETAIL_GAP;
+		}
+
+		String details = joinedDetails(text.coordinates, text.dimension);
+		if (!details.isEmpty() && textRight > left) {
+			graphics.text(font, RenderHelpers.ellipsize(font, details, textRight - left), left, y, DETAIL_TEXT_COLOR, true);
+		}
+	}
+
+	private LocationText locationText() {
+		if (location == null) {
+			return new LocationText("", "", "", I18n.get("config.whereareyou.locations.no_location"));
+		}
+		String coordinates = "";
+		String dimension = "";
+		String distance = "";
 		if (location.hasCoordinates()) {
-			parts.add(I18n.get("config.whereareyou.locations.coordinates", blockCoord(location.x()), blockCoord(location.y()), blockCoord(location.z())));
+			coordinates = I18n.get("config.whereareyou.locations.coordinates", blockCoord(location.x()), blockCoord(location.y()), blockCoord(location.z()));
 		}
 		if (location.hasDimension()) {
-			parts.add(RenderHelpers.prettyDimension(location.dimension()));
+			dimension = RenderHelpers.prettyDimension(location.dimension());
 		}
 		if (location.hasDistance()) {
-			parts.add(I18n.get("config.whereareyou.locations.distance", Math.round(location.distance())));
+			distance = I18n.get("config.whereareyou.locations.distance", Math.round(location.distance()));
 		}
-		return parts.isEmpty() ? I18n.get("config.whereareyou.locations.hidden") : String.join("  |  ", parts);
+		String status = coordinates.isEmpty() && dimension.isEmpty() && distance.isEmpty()
+				? I18n.get("config.whereareyou.locations.hidden")
+				: "";
+		return new LocationText(coordinates, dimension, distance, status);
+	}
+
+	private static String joinedDetails(String coordinates, String dimension) {
+		List<String> parts = new java.util.ArrayList<>();
+		if (!coordinates.isEmpty()) {
+			parts.add(coordinates);
+		}
+		if (!dimension.isEmpty()) {
+			parts.add(dimension);
+		}
+		return String.join("  |  ", parts);
 	}
 
 	private static int blockCoord(double value) {
 		return (int) Math.floor(value);
+	}
+
+	private record LocationText(String coordinates, String dimension, String distance, String status) {
 	}
 }
