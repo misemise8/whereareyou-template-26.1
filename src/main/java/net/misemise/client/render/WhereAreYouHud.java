@@ -134,7 +134,7 @@ public final class WhereAreYouHud {
 				}
 				double targetAngle = Math.atan2(dx, dz);
 				double relative = targetAngle + Math.toRadians(client.player.getYRot());
-				sx = Math.sin(relative);
+				sx = -Math.sin(relative);
 				sy = -Math.cos(relative);
 				double halfWidth = Math.max(1.0D, screenWidth / 2.0D - OVERLAY_MARGIN);
 				double halfHeight = Math.max(1.0D, screenHeight / 2.0D - OVERLAY_MARGIN);
